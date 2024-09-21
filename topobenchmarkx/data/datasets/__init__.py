@@ -1,6 +1,7 @@
 """This module contains the implemented dataset classes for the topological benchmarking experiments."""
 
 from .us_county_demos_dataset import USCountyDemosDataset
+from .language_dataset import LanguageDataset
 
 PLANETOID_DATASETS = [
     "Cora",
@@ -39,6 +40,7 @@ PYG_DATASETS = (
 
 __all__ = [
     "USCountyDemosDataset",
+    "LanguageDataset",
     "PYG_DATASETS",
     "PLANETOID_DATASETS",
     "TU_DATASETS",
