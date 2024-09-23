@@ -11,8 +11,8 @@ from topobenchmarkx.data.datasets import (
     HETEROPHILIC_DATASETS,
     PLANETOID_DATASETS,
     TU_DATASETS,
+    LanguageDataset,
     USCountyDemosDataset,
-    LanguageDataset
 )
 from topobenchmarkx.data.loaders.base import AbstractLoader
 from topobenchmarkx.data.utils import (
@@ -140,11 +140,12 @@ class GraphLoader(AbstractLoader):
             )
             # Need to redefine data_dir for the (year, task_variable) pair chosen
             data_dir = dataset.processed_root
-        
+
         elif self.parameters.data_name in ["LanguageDataset"]:
             dataset = LanguageDataset(
                 root=root_data_dir,
                 name=self.parameters["data_name"],
+                parameters=self.parameters,
             )
             # No processed directory as we will constuct graphs for each sample after loading the data
             data_dir = dataset.raw_dir

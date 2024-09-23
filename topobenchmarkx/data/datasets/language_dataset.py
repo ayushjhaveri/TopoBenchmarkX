@@ -6,12 +6,12 @@ import shutil
 from typing import ClassVar
 
 from omegaconf import DictConfig
-from torch_geometric.data import Data, InMemoryDataset, extract_zip
-from torch_geometric.io import fs
+from torch_geometric.data import InMemoryDataset, extract_zip
 
 from topobenchmarkx.data.utils import (
     download_file_from_drive,
 )
+
 
 class LanguageDataset(InMemoryDataset):
     r"""Dataset class for Language dataset.
@@ -46,11 +46,13 @@ class LanguageDataset(InMemoryDataset):
         self,
         root: str,
         name: str,
+        parameters: DictConfig,
     ) -> None:
         self.name = name
         super().__init__(
             root,
         )
+
     def __repr__(self) -> str:
         return f"{self.name}(self.root={self.root}, self.name={self.name}, self.force_reload={self.force_reload})"
 
@@ -77,7 +79,7 @@ class LanguageDataset(InMemoryDataset):
         self.processed_root = osp.join(
             self.root,
             self.name,
-            "_".join([str(1999), 'var']),
+            "_".join([str(1999), "var"]),
         )
         return osp.join(self.processed_root, "processed")
 
@@ -131,8 +133,10 @@ class LanguageDataset(InMemoryDataset):
         # Delete osp.join(folder, self.name) dir
         shutil.rmtree(osp.join(folder, self.name))
 
-    def processed_dir(self) -> None:
-        r"""Handle the data for the dataset.
-        """
+    def process(self) -> None:
+        # read into data_list
+
         pass
 
+    def processed_dir(self) -> None:
+        r"""Handle the data for the dataset."""
