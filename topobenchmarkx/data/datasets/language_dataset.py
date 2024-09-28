@@ -4,12 +4,16 @@ import os
 import os.path as osp
 import shutil
 from typing import ClassVar
+import json
+import torch
 
 from omegaconf import DictConfig
-from torch_geometric.data import InMemoryDataset, extract_zip
+from torch_geometric.data import Data, InMemoryDataset, extract_zip
+from torch_geometric.io import fs
 
 from topobenchmarkx.data.utils import (
     download_file_from_drive,
+    read_us_county_demos,
 )
 
 
@@ -49,9 +53,28 @@ class LanguageDataset(InMemoryDataset):
         parameters: DictConfig,
     ) -> None:
         self.name = name
+        self.parameters = parameters
+        # self.year = parameters.year
+        # self.task_variable = parameters.task_variable
         super().__init__(
             root,
         )
+
+        out = fs.torch_load(self.processed_paths[0])
+        assert len(out) == 3 or len(out) == 4
+
+        if len(out) == 3:  # Backward compatibility.
+            data, self.slices, self.sizes = out
+            data_cls = Data
+        else:
+            data, self.slices, self.sizes, data_cls = out
+
+        if not isinstance(data, dict):  # Backward compatibility.
+            self.data = data
+        else:
+            self.data = data_cls.from_dict(data)
+
+        assert isinstance(self._data, Data)
 
     def __repr__(self) -> str:
         return f"{self.name}(self.root={self.root}, self.name={self.name}, self.force_reload={self.force_reload})"
@@ -79,7 +102,6 @@ class LanguageDataset(InMemoryDataset):
         self.processed_root = osp.join(
             self.root,
             self.name,
-            "_".join([str(1999), "var"]),
         )
         return osp.join(self.processed_root, "processed")
 
@@ -129,14 +151,47 @@ class LanguageDataset(InMemoryDataset):
         os.unlink(path)
         # Move files from osp.join(folder, name_download) to folder
         for file in os.listdir(osp.join(folder, self.name)):
+            if file.endswith('ipynb'):
+                continue
             shutil.move(osp.join(folder, self.name, file), folder)
         # Delete osp.join(folder, self.name) dir
         shutil.rmtree(osp.join(folder, self.name))
 
     def process(self) -> None:
-        # read into data_list
+        r"""Handle the data for the dataset.
 
-        pass
+        This method loads the Language dataser, applies any pre-
+        processing transformations, and saves the processed data
+        to the appropriate location.
+        """
+        folder = self.raw_dir
+        with open(folder + '/token_tag_id_data.json', 'r') as file:
+            token_tag_id_data = json.load(file)
+        model_state_dict = torch.load(folder + '/Test_attention_all_head.pth', map_location=torch.device('cpu'))
+        graph_sentences = []
+        for sentence in range(len(model_state_dict)):
+            ids = token_tag_id_data[str(sentence)]['ids']
+            tokens = token_tag_id_data[str(sentence)]['tokens']
+            tags = token_tag_id_data[str(sentence)]['tags']
+            for head in range(len(model_state_dict[sentence])):
+                attention_scores = model_state_dict[sentence][head]
+                edge_index = []
+                edge_attr = []
+                for i in range(len(attention_scores)):
+                    for j in range(len(attention_scores[0])):
+                        edge_index.append([i,j])
+                edge_index = torch.transpose(torch.FloatTensor(edge_index), 0, 1)
+                # edge_attr = torch.transpose(torch.FloatTensor(edge_attr), 0, 1)
+                # graph = Data(x=x, edge_index=edge_index, edge_attr = edge_attr)
+                graph = Data(edge_index=edge_index, attention_scores = attention_scores.flatten(), 
+                             attention_shape = attention_scores.shape, ids = ids, tokens = tokens, tags = tags)
+                graph_sentences.append(graph)
 
-    def processed_dir(self) -> None:
-        r"""Handle the data for the dataset."""
+        self.data, self.slices = self.collate(graph_sentences)
+        self._data_list = None  # Reset cache.
+        fs.torch_save(
+            (self._data.to_dict(), self.slices, {}, self._data.__class__),
+            self.processed_paths[0],
+        )
+
+        self.graph = graph_sentences
