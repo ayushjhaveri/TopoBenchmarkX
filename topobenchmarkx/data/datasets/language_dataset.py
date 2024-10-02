@@ -58,6 +58,7 @@ class LanguageDataset(InMemoryDataset):
         # self.task_variable = parameters.task_variable
         super().__init__(
             root,
+            force_reload=True,
         )
 
         out = fs.torch_load(self.processed_paths[0])
@@ -150,10 +151,11 @@ class LanguageDataset(InMemoryDataset):
         # Delete zip file
         os.unlink(path)
         # Move files from osp.join(folder, name_download) to folder
+        
         for file in os.listdir(osp.join(folder, self.name)):
             if file.endswith('ipynb'):
                 continue
-            shutil.move(osp.join(folder, self.name, file), folder)
+            shutil.move(osp.join(folder, self.name, file), osp.join(folder, file))
         # Delete osp.join(folder, self.name) dir
         shutil.rmtree(osp.join(folder, self.name))
 

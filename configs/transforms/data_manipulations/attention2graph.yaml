@@ -1,0 +1,5 @@
+_target_: topobenchmarkx.transforms.data_transform.DataTransform
+transform_name: "Attention2Graph"
+transform_type: "data manipulation"
+threshold: 0.1
+

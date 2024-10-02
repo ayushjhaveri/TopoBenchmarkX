@@ -147,8 +147,8 @@ class GraphLoader(AbstractLoader):
                 name=self.parameters["data_name"],
                 parameters=self.parameters,
             )
-            # No processed directory as we will constuct graphs for each sample after loading the data
-            data_dir = dataset.raw_dir
+            
+            data_dir = dataset.processed_root
 
         elif self.parameters.data_name in ["manual"]:
             data = load_manual_graph()
